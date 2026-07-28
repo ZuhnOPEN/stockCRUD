@@ -80,7 +80,7 @@ const isEditing = computed(() => editingId.value !== null)
 
         <label>
           Precio
-          <input v-model="form.price" type="number" min="0" step="100" placeholder="2500" />
+          <input v-model="form.price" type="number" min="0" step="0" placeholder="2500" />
         </label>
 
         <div class="actions-row">
