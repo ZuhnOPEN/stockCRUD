@@ -1,32 +1,44 @@
 <script setup>
-import { computed, ref } from 'vue'
-import { createProduct, updateProduct, deleteProduct } from './stockStore.js'
+import { computed, onMounted, ref } from 'vue'
+import { createProduct, deleteProduct, fetchProducts, updateProduct } from './stockStore.js'
 
 const products = ref([])
 const form = ref({ name: '', quantity: '', price: '' })
 const editingId = ref(null)
+const loading = ref(false)
+const error = ref('')
 
 const resetForm = () => {
   form.value = { name: '', quantity: '', price: '' }
   editingId.value = null
 }
 
-const submitProduct = () => {
+const submitProduct = async () => {
   const name = form.value.name.trim()
   const quantity = Number(form.value.quantity)
   const price = Number(form.value.price)
 
   if (!name || Number.isNaN(quantity) || quantity < 1 || Number.isNaN(price) || price < 0) {
+    error.value = 'Completa nombre, cantidad y precio válidos.'
     return
   }
 
-  if (editingId.value !== null) {
-    updateProduct(products.value, editingId.value, { name, quantity, price })
-  } else {
-    createProduct(products.value, { name, quantity, price })
-  }
+  loading.value = true
+  error.value = ''
 
-  resetForm()
+  try {
+    if (editingId.value !== null) {
+      await updateProduct(products.value, editingId.value, { name, quantity, price })
+    } else {
+      await createProduct(products.value, { name, quantity, price })
+    }
+
+    resetForm()
+  } catch (err) {
+    error.value = err.message || 'No se pudo guardar el producto.'
+  } finally {
+    loading.value = false
+  }
 }
 
 const editProduct = (product) => {
@@ -38,11 +50,24 @@ const editProduct = (product) => {
   editingId.value = product.id
 }
 
-const removeProduct = (id) => {
-  deleteProduct(products.value, id)
+const removeProduct = async (id) => {
+  if (!window.confirm('¿Eliminar este producto?')) {
+    return
+  }
 
-  if (editingId.value === id) {
-    resetForm()
+  loading.value = true
+  error.value = ''
+
+  try {
+    await deleteProduct(products.value, id)
+
+    if (editingId.value === id) {
+      resetForm()
+    }
+  } catch (err) {
+    error.value = err.message || 'No se pudo eliminar el producto.'
+  } finally {
+    loading.value = false
   }
 }
 
@@ -51,6 +76,19 @@ const totalValue = computed(() =>
 )
 
 const isEditing = computed(() => editingId.value !== null)
+
+onMounted(async () => {
+  loading.value = true
+  error.value = ''
+
+  try {
+    await fetchProducts(products.value)
+  } catch (err) {
+    error.value = err.message || 'No se pudieron cargar los productos.'
+  } finally {
+    loading.value = false
+  }
+})
 </script>
 
 <template>
@@ -66,6 +104,8 @@ const isEditing = computed(() => editingId.value !== null)
           <strong>${{ totalValue.toLocaleString('es-CL') }}</strong>
         </div>
       </header>
+
+      <p v-if="error" class="error">{{ error }}</p>
 
       <form class="form" @submit.prevent="submitProduct">
         <label>
@@ -84,16 +124,18 @@ const isEditing = computed(() => editingId.value !== null)
         </label>
 
         <div class="actions-row">
-          <button type="submit">
+          <button type="submit" :disabled="loading">
             {{ isEditing ? 'Guardar producto' : 'Agregar producto' }}
           </button>
-          <button v-if="isEditing" type="button" class="secondary" @click="resetForm">
+          <button v-if="isEditing" type="button" class="secondary" @click="resetForm" :disabled="loading">
             Cancelar
           </button>
         </div>
       </form>
 
-      <ul v-if="products.length" class="list">
+      <p v-if="loading" class="empty">Sincronizando con MongoDB…</p>
+
+      <ul v-else-if="products.length" class="list">
         <li v-for="product in products" :key="product.id" class="item">
           <div>
             <strong>{{ product.name }}</strong>
@@ -102,8 +144,8 @@ const isEditing = computed(() => editingId.value !== null)
           </div>
 
           <div class="row-actions">
-            <button type="button" @click="editProduct(product)">Editar</button>
-            <button type="button" class="danger" @click="removeProduct(product.id)">
+            <button type="button" @click="editProduct(product)" :disabled="loading">Editar</button>
+            <button type="button" class="danger" @click="removeProduct(product.id)" :disabled="loading">
               Eliminar
             </button>
           </div>
@@ -202,6 +244,11 @@ button {
   color: white;
 }
 
+button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .secondary {
   background: #64748b;
 }
@@ -233,8 +280,14 @@ button {
   margin-top: 0.25rem;
 }
 
-.empty {
+.empty,
+.error {
   color: #64748b;
   margin: 0;
+}
+
+.error {
+  color: #dc2626;
+  margin-bottom: 0.75rem;
 }
 </style>

@@ -8,38 +8,34 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-const rawUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/stockcrud'
 const PORT = process.env.PORT || 4000
+const rawUri = process.env.MONGODB_URI || 'mongodb://localhost:27017/stockcrud'
 
-// Ensure a default DB name if none provided
 let MONGODB_URI = rawUri
 try {
-  const hasDb = /mongodb(?:\+srv)?:\/\/[^/]+\/.+/.test(rawUri)
-  if (!hasDb) {
-    // append database 'stockcrud' before querystring if missing
+  const hasDbPath = /mongodb(?:\+srv)?:\/\/[^/]+\/.+/.test(rawUri)
+  if (!hasDbPath) {
     if (rawUri.includes('?')) {
       MONGODB_URI = rawUri.replace('?', '/stockcrud?')
     } else {
-      MONGODB_URI = rawUri.endsWith('/') ? rawUri + 'stockcrud' : rawUri + '/stockcrud'
+      MONGODB_URI = rawUri.endsWith('/') ? `${rawUri}stockcrud` : `${rawUri}/stockcrud`
     }
   }
-} catch (e) {
+} catch {
   MONGODB_URI = rawUri
 }
 
-// Log masked URI (hide credentials)
-const maskUri = (u) => u.replace(/:\/\/(.*?:).*?@/, '://$1****@')
+const maskUri = (uri) => uri.replace(/:\/\/(.*?:).*?@/, '://$1****@')
 console.log('Using MongoDB URI:', maskUri(MONGODB_URI))
 
 mongoose
-  .connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+  .connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((err) => {
     console.error('MongoDB connection error:', err.message)
     process.exit(1)
   })
 
-// Routes
 app.get('/api/products', async (req, res) => {
   try {
     const products = await Product.find().sort({ createdAt: -1 })
