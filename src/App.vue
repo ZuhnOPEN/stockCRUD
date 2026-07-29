@@ -1,7 +1,8 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, watch, onMounted } from 'vue'
 import { createProduct, updateProduct, deleteProduct } from './stockStore.js'
 
+// Product CRUD state
 const products = ref([])
 const form = ref({ name: '', quantity: '', price: '' })
 const editingId = ref(null)
@@ -51,6 +52,32 @@ const totalValue = computed(() =>
 )
 
 const isEditing = computed(() => editingId.value !== null)
+
+// Theme handling: 'light' or 'dark'
+const theme = ref(
+  localStorage.getItem('theme') ||
+    (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+)
+
+onMounted(() => {
+  document.documentElement.classList.toggle('dark', theme.value === 'dark')
+})
+
+watch(theme, (val) => {
+  document.documentElement.classList.toggle('dark', val === 'dark')
+  try {
+    localStorage.setItem('theme', val)
+  } catch (e) {
+    // ignore storage errors
+  }
+})
+
+const toggleTheme = () => {
+  theme.value = theme.value === 'dark' ? 'light' : 'dark'
+}
+
+const themeEmoji = computed(() => (theme.value === 'dark' ? '🌙' : '☀️'))
+const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
 </script>
 
 <template>
@@ -61,9 +88,23 @@ const isEditing = computed(() => editingId.value !== null)
           <p class="eyebrow">Stock CRUD</p>
           <h1>Gestión de inventario</h1>
         </div>
-        <div class="summary">
-          <span>{{ products.length }} productos</span>
-          <strong>${{ totalValue.toLocaleString('es-CL') }}</strong>
+
+        <div class="header-controls">
+          <div class="summary">
+            <span>{{ products.length }} productos</span>
+            <strong>${{ totalValue.toLocaleString('es-CL') }}</strong>
+          </div>
+
+          <button
+            class="theme-toggle"
+            type="button"
+            @click="toggleTheme"
+            :aria-pressed="theme === 'dark'"
+            :title="`Tema: ${themeLabel}`"
+          >
+            <span class="emoji">{{ themeEmoji }}</span>
+            <span class="visually-hidden">Cambiar tema</span>
+          </button>
         </div>
       </header>
 
@@ -80,7 +121,7 @@ const isEditing = computed(() => editingId.value !== null)
 
         <label>
           Precio
-          <input v-model="form.price" type="number" min="0" step="100" placeholder="2500" />
+          <input v-model="form.price" type="number" min="0" step="0" placeholder="2500" />
         </label>
 
         <div class="actions-row">
@@ -116,16 +157,39 @@ const isEditing = computed(() => editingId.value !== null)
 </template>
 
 <style scoped>
+/* CSS variables and light/dark palettes set on :root and overwritten by .dark */
+:global(:root) {
+  --bg: #f3f4f6;
+  --card-bg: #ffffff;
+  --text: #0f172a;
+  --muted: #64748b;
+  --primary: #2563eb;
+  --secondary: #64748b;
+  --danger: #dc2626;
+  --border: #e2e8f0;
+  --eyebrow: #4f46e5;
+  --shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+}
+
+:global(.dark) {
+  --bg: #0b1220;
+  --card-bg: #0f1724;
+  --text: #e6eef8;
+  --muted: #9aa6b2;
+  --primary: #60a5fa;
+  --secondary: #94a3b8;
+  --danger: #fb7185;
+  --border: #1f2937;
+  --eyebrow: #7c3aed;
+  --shadow: 0 10px 30px rgba(2, 6, 23, 0.7);
+}
+
 :global(body) {
   margin: 0;
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-  background: #f3f4f6;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 .page {
@@ -137,10 +201,10 @@ const isEditing = computed(() => editingId.value !== null)
 
 .card {
   width: min(720px, 100%);
-  background: #ffffff;
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 2rem;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+  box-shadow: var(--shadow);
 }
 
 .header {
@@ -151,9 +215,15 @@ const isEditing = computed(() => editingId.value !== null)
   margin-bottom: 1.25rem;
 }
 
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .eyebrow {
   margin: 0 0 0.25rem;
-  color: #4f46e5;
+  color: var(--eyebrow);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -165,7 +235,7 @@ const isEditing = computed(() => editingId.value !== null)
   flex-direction: column;
   align-items: flex-end;
   gap: 0.15rem;
-  color: #475569;
+  color: var(--muted);
 }
 
 .form {
@@ -178,13 +248,15 @@ label {
   display: grid;
   gap: 0.35rem;
   font-weight: 600;
-  color: #0f172a;
+  color: var(--text);
 }
 
 input {
   padding: 0.75rem;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--border);
   border-radius: 8px;
+  background: transparent;
+  color: var(--text);
 }
 
 .actions-row,
@@ -198,16 +270,34 @@ button {
   border: none;
   border-radius: 8px;
   cursor: pointer;
-  background: #2563eb;
+  background: var(--primary);
   color: white;
 }
 
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+}
+
+.theme-toggle .emoji {
+  font-size: 1.05rem;
+}
+
 .secondary {
-  background: #64748b;
+  background: var(--secondary);
+  color: white;
 }
 
 .danger {
-  background: #dc2626;
+  background: var(--danger);
+  color: white;
 }
 
 .list {
@@ -222,19 +312,28 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--border);
   border-radius: 10px;
   padding: 0.9rem 1rem;
   gap: 1rem;
 }
 
 .meta {
-  color: #64748b;
+  color: var(--muted);
   margin-top: 0.25rem;
 }
 
 .empty {
-  color: #64748b;
+  color: var(--muted);
   margin: 0;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  height: 1px;
+  width: 1px;
+  overflow: hidden;
+  clip: rect(1px, 1px, 1px, 1px);
+  white-space: nowrap;
 }
 </style>
