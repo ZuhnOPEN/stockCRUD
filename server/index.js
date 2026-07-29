@@ -1,4 +1,8 @@
-require('dotenv').config()
+const path = require('path')
+const dotenv = require('dotenv')
+
+dotenv.config({ path: path.resolve(__dirname, '.env') })
+
 const express = require('express')
 const cors = require('cors')
 const mongoose = require('mongoose')
@@ -28,13 +32,36 @@ try {
 const maskUri = (uri) => uri.replace(/:\/\/(.*?:).*?@/, '://$1****@')
 console.log('Using MongoDB URI:', maskUri(MONGODB_URI))
 
-mongoose
-  .connect(MONGODB_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => {
-    console.error('MongoDB connection error:', err.message)
+const connectToMongo = async () => {
+  try {
+    await mongoose.connect(MONGODB_URI, {
+      serverSelectionTimeoutMS: 15000,
+      connectTimeoutMS: 15000,
+      family: 4,
+    })
+
+    console.log('Connected to MongoDB')
+    console.log('MongoDB database:', mongoose.connection.name)
+  } catch (err) {
+    console.error('MongoDB connection error')
+    console.error('name:', err.name)
+    console.error('message:', err.message)
+    if (err.reason) console.error('reason:', err.reason)
+    if (err.code) console.error('code:', err.code)
+    if (err.codeName) console.error('codeName:', err.codeName)
     process.exit(1)
+  }
+}
+
+connectToMongo()
+
+app.get('/health', (req, res) => {
+  res.json({
+    ok: true,
+    mongoState: mongoose.connection.readyState,
+    database: mongoose.connection.name || null,
   })
+})
 
 app.get('/api/products', async (req, res) => {
   try {
