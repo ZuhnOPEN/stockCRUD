@@ -1,18 +1,19 @@
 <script setup>
 import { computed, ref, watch, onMounted } from 'vue'
-import { createProduct, updateProduct, deleteProduct } from './stockStore.js'
+import { fetchProducts, createProduct, updateProduct, deleteProduct } from './stockStore.js'
 
 // Product CRUD state
 const products = ref([])
 const form = ref({ name: '', quantity: '', price: '' })
 const editingId = ref(null)
+const loading = ref(false)
 
 const resetForm = () => {
   form.value = { name: '', quantity: '', price: '' }
   editingId.value = null
 }
 
-const submitProduct = () => {
+const submitProduct = async () => {
   const name = form.value.name.trim()
   const quantity = Number(form.value.quantity)
   const price = Number(form.value.price)
@@ -21,13 +22,20 @@ const submitProduct = () => {
     return
   }
 
-  if (editingId.value !== null) {
-    updateProduct(products.value, editingId.value, { name, quantity, price })
-  } else {
-    createProduct(products.value, { name, quantity, price })
+  loading.value = true
+  try {
+    if (editingId.value !== null) {
+      await updateProduct(products.value, editingId.value, { name, quantity, price })
+    } else {
+      await createProduct(products.value, { name, quantity, price })
+    }
+    resetForm()
+  } catch (err) {
+    console.error(err)
+    alert(err.message || 'Error al guardar')
+  } finally {
+    loading.value = false
   }
-
-  resetForm()
 }
 
 const editProduct = (product) => {
@@ -39,11 +47,17 @@ const editProduct = (product) => {
   editingId.value = product.id
 }
 
-const removeProduct = (id) => {
-  deleteProduct(products.value, id)
-
-  if (editingId.value === id) {
-    resetForm()
+const removeProduct = async (id) => {
+  if (!confirm('¿Eliminar este producto?')) return
+  loading.value = true
+  try {
+    await deleteProduct(products.value, id)
+    if (editingId.value === id) resetForm()
+  } catch (err) {
+    console.error(err)
+    alert(err.message || 'Error al eliminar')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -59,8 +73,13 @@ const theme = ref(
     (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
 )
 
-onMounted(() => {
+onMounted(async () => {
   document.documentElement.classList.toggle('dark', theme.value === 'dark')
+  try {
+    await fetchProducts(products)
+  } catch (err) {
+    console.error('Carga inicial de productos falló:', err)
+  }
 })
 
 watch(theme, (val) => {
@@ -76,7 +95,7 @@ const toggleTheme = () => {
   theme.value = theme.value === 'dark' ? 'light' : 'dark'
 }
 
-const themeEmoji = computed(() => (theme.value === 'dark' ? '🌙' : '☀️'))
+const themeEmoji = computed(() => (theme.value === 'dark' ? '🌚' : '☀️'))
 const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
 </script>
 
