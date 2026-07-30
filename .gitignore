@@ -59,10 +59,12 @@ screenshots/
 .env.*.local
 *.env
 
-
-.server/
+.SELENIUM_QUICKSTART.md
+.FIREFOX_GUIDE.md
 .bash_profile
 .bashrc
 .profile
 .zprofile
 .zshrc
+.~lock.REQUIREMENTS.md#
+.claude/
