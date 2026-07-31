@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.js",
+    "dev:frontend": "vite",
+    "dev:backend": "npm --prefix server run start",
     "build": "vite build",
     "preview": "vite preview",
     "lint": "run-s \"lint:*\"",
