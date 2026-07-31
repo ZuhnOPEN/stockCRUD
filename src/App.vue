@@ -211,8 +211,26 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 
+body::before {
+  content: 'Aire';
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(4rem, 12vw, 8rem);
+  font-weight: 800;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.16);
+  pointer-events: none;
+  user-select: none;
+  z-index: 0;
+  filter: blur(1px);
+}
+
 .page {
-  min-height: 100vh;
+  position: relative;
+  z-index: 1;  min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 2rem;
