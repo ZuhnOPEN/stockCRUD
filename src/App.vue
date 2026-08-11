@@ -1,6 +1,13 @@
 <script setup>
 import { computed, ref, watch, onMounted } from 'vue'
-import { fetchProducts, createProduct, updateProduct, deleteProduct } from './stockStore.js'
+import {
+  fetchProducts,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  loginUser,
+  registerUser,
+} from './stockStore.js'
 
 // Product CRUD state
 const products = ref([])
@@ -8,9 +15,55 @@ const form = ref({ name: '', quantity: '', price: '' })
 const editingId = ref(null)
 const loading = ref(false)
 
+// Auth state
+const authForm = ref({ name: '', email: '', password: '' })
+const authMode = ref('login')
+const authError = ref('')
+const token = ref(localStorage.getItem('jwt_token') || '')
+const user = ref(JSON.parse(localStorage.getItem('user') || 'null'))
+
+const isAuthenticated = computed(() => Boolean(token.value && user.value))
+const isEditing = computed(() => editingId.value !== null)
+
 const resetForm = () => {
   form.value = { name: '', quantity: '', price: '' }
   editingId.value = null
+}
+
+const resetAuthForm = () => {
+  authForm.value = { name: '', email: '', password: '' }
+  authError.value = ''
+}
+
+const saveSession = (session) => {
+  token.value = session.token
+  user.value = session.user
+  localStorage.setItem('jwt_token', session.token)
+  localStorage.setItem('user', JSON.stringify(session.user))
+}
+
+const clearSession = () => {
+  token.value = ''
+  user.value = null
+  localStorage.removeItem('jwt_token')
+  localStorage.removeItem('user')
+  products.value = []
+  resetForm()
+}
+
+const loadProducts = async () => {
+  if (!token.value) return
+  loading.value = true
+  try {
+    await fetchProducts(products, token.value)
+  } catch (err) {
+    console.error('Carga inicial de productos falló:', err)
+    if (err.message.includes('Unauthorized') || err.message.includes('token')) {
+      clearSession()
+    }
+  } finally {
+    loading.value = false
+  }
 }
 
 const submitProduct = async () => {
@@ -25,9 +78,9 @@ const submitProduct = async () => {
   loading.value = true
   try {
     if (editingId.value !== null) {
-      await updateProduct(products.value, editingId.value, { name, quantity, price })
+      await updateProduct(products.value, editingId.value, { name, quantity, price }, token.value)
     } else {
-      await createProduct(products.value, { name, quantity, price })
+      await createProduct(products.value, { name, quantity, price }, token.value)
     }
     resetForm()
   } catch (err) {
@@ -51,7 +104,7 @@ const removeProduct = async (id) => {
   if (!confirm('¿Eliminar este producto?')) return
   loading.value = true
   try {
-    await deleteProduct(products.value, id)
+    await deleteProduct(products.value, id, token.value)
     if (editingId.value === id) resetForm()
   } catch (err) {
     console.error(err)
@@ -61,25 +114,55 @@ const removeProduct = async (id) => {
   }
 }
 
+const submitAuth = async () => {
+  authError.value = ''
+  const { name, email, password } = authForm.value
+
+  if (!email.trim() || !password.trim() || (authMode.value === 'register' && !name.trim())) {
+    authError.value = 'Completa los datos requeridos'
+    return
+  }
+
+  loading.value = true
+  try {
+    if (authMode.value === 'register') {
+      await registerUser({ name: name.trim(), email: email.trim(), password: password.trim() })
+      const session = await loginUser({ email: email.trim(), password: password.trim() })
+      saveSession(session)
+    } else {
+      const session = await loginUser({ email: email.trim(), password: password.trim() })
+      saveSession(session)
+    }
+    resetAuthForm()
+    await loadProducts()
+  } catch (err) {
+    authError.value = err.message || 'Error de autenticación'
+  } finally {
+    loading.value = false
+  }
+}
+
+const logout = () => {
+  clearSession()
+}
+
 const totalValue = computed(() =>
   products.value.reduce((sum, product) => sum + product.quantity * product.price, 0),
 )
 
-const isEditing = computed(() => editingId.value !== null)
-
 // Theme handling: 'light' or 'dark'
 const theme = ref(
   localStorage.getItem('theme') ||
-    (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
+    (typeof window !== 'undefined' &&
+    window.matchMedia &&
+    window.matchMedia('(prefers-color-scheme: dark)').matches
+      ? 'dark'
+      : 'light'),
 )
 
 onMounted(async () => {
   document.documentElement.classList.toggle('dark', theme.value === 'dark')
-  try {
-    await fetchProducts(products)
-  } catch (err) {
-    console.error('Carga inicial de productos falló:', err)
-  }
+  await loadProducts()
 })
 
 watch(theme, (val) => {
@@ -106,6 +189,14 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
         <div>
           <p class="eyebrow">Stock CRUD</p>
           <h1>Gestión de inventario</h1>
+          <p class="subhead">
+            <template v-if="isAuthenticated">
+              Hola, {{ user.name }} — tus productos son persistentes y solo visibles para ti.
+            </template>
+            <template v-else>
+              Inicia sesión o regístrate para comenzar a guardar tus productos.
+            </template>
+          </p>
         </div>
 
         <div class="header-controls">
@@ -127,50 +218,101 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
         </div>
       </header>
 
-      <form class="form" @submit.prevent="submitProduct">
-        <label>
-          Nombre
-          <input v-model="form.name" placeholder="Ej. Café" />
-        </label>
-
-        <label>
-          Cantidad
-          <input v-model="form.quantity" type="number" min="1" placeholder="10" />
-        </label>
-
-        <label>
-          Precio
-          <input v-model="form.price" type="number" min="0" step="0" placeholder="2500" />
-        </label>
-
-        <div class="actions-row">
-          <button type="submit">
-            {{ isEditing ? 'Guardar producto' : 'Agregar producto' }}
-          </button>
-          <button v-if="isEditing" type="button" class="secondary" @click="resetForm">
-            Cancelar
-          </button>
-        </div>
-      </form>
-
-      <ul v-if="products.length" class="list">
-        <li v-for="product in products" :key="product.id" class="item">
-          <div>
-            <strong>{{ product.name }}</strong>
-            <div class="meta">Cantidad: {{ product.quantity }}</div>
-            <div class="meta">Precio: ${{ product.price.toLocaleString('es-CL') }}</div>
-          </div>
-
-          <div class="row-actions">
-            <button type="button" @click="editProduct(product)">Editar</button>
-            <button type="button" class="danger" @click="removeProduct(product.id)">
-              Eliminar
+      <template v-if="!isAuthenticated">
+        <form class="form" @submit.prevent="submitAuth">
+          <div class="auth-switch">
+            <button
+              type="button"
+              :class="{ active: authMode === 'login' }"
+              @click="authMode = 'login'"
+            >
+              Entrar
+            </button>
+            <button
+              type="button"
+              :class="{ active: authMode === 'register' }"
+              @click="authMode = 'register'"
+            >
+              Registrarse
             </button>
           </div>
-        </li>
-      </ul>
 
-      <p v-else class="empty">Aún no hay productos registrados.</p>
+          <label v-if="authMode === 'register'">
+            Nombre
+            <input v-model="authForm.name" placeholder="Tu nombre" />
+          </label>
+
+          <label>
+            Correo
+            <input v-model="authForm.email" type="email" placeholder="correo@ejemplo.com" />
+          </label>
+
+          <label>
+            Contraseña
+            <input v-model="authForm.password" type="password" placeholder="********" />
+          </label>
+
+          <div class="actions-row">
+            <button type="submit">
+              {{ authMode === 'register' ? 'Crear cuenta' : 'Iniciar sesión' }}
+            </button>
+          </div>
+
+          <p class="auth-error" v-if="authError">{{ authError }}</p>
+        </form>
+      </template>
+
+      <template v-else>
+        <div class="user-actions">
+          <span class="user-label">Usuario: {{ user.email }}</span>
+          <button type="button" class="secondary" @click="logout">Cerrar sesión</button>
+        </div>
+
+        <form class="form" @submit.prevent="submitProduct">
+          <label>
+            Nombre
+            <input v-model="form.name" placeholder="Ej. Café" />
+          </label>
+
+          <label>
+            Cantidad
+            <input v-model="form.quantity" type="number" min="1" placeholder="10" />
+          </label>
+
+          <label>
+            Precio
+            <input v-model="form.price" type="number" min="0" step="0" placeholder="2500" />
+          </label>
+
+          <div class="actions-row">
+            <button type="submit">
+              {{ isEditing ? 'Guardar producto' : 'Agregar producto' }}
+            </button>
+            <button v-if="isEditing" type="button" class="secondary" @click="resetForm">
+              Cancelar
+            </button>
+          </div>
+        </form>
+
+        <ul v-if="products.length" class="list">
+          <li v-for="product in products" :key="product.id" class="item">
+            <div>
+              <strong>{{ product.name }}</strong>
+              <div class="meta">Cantidad: {{ product.quantity }}</div>
+              <div class="meta">Precio: ${{ product.price.toLocaleString('es-CL') }}</div>
+            </div>
+
+            <div class="row-actions">
+              <button type="button" @click="editProduct(product)">Editar</button>
+              <button type="button" class="danger" @click="removeProduct(product.id)">
+                Eliminar
+              </button>
+            </div>
+          </li>
+        </ul>
+
+        <p v-else class="empty">Aún no hay productos registrados.</p>
+      </template>
     </section>
   </main>
 </template>
@@ -205,10 +347,18 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
 
 :global(body) {
   margin: 0;
-  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
   background: var(--bg);
   color: var(--text);
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 body::before {
@@ -230,7 +380,8 @@ body::before {
 
 .page {
   position: relative;
-  z-index: 1;  min-height: 100vh;
+  z-index: 1;
+  min-height: 100vh;
   display: grid;
   place-items: center;
   padding: 2rem;
