@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, onMounted } from 'vue'
+import AuthPage from './components/AuthPage.vue'
 import {
   fetchProducts,
   createProduct,
@@ -219,47 +220,18 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
       </header>
 
       <template v-if="!isAuthenticated">
-        <form class="form" @submit.prevent="submitAuth">
-          <div class="auth-switch">
-            <button
-              type="button"
-              :class="{ active: authMode === 'login' }"
-              @click="authMode = 'login'"
-            >
-              Entrar
-            </button>
-            <button
-              type="button"
-              :class="{ active: authMode === 'register' }"
-              @click="authMode = 'register'"
-            >
-              Registrarse
-            </button>
-          </div>
-
-          <label v-if="authMode === 'register'">
-            Nombre
-            <input v-model="authForm.name" placeholder="Tu nombre" />
-          </label>
-
-          <label>
-            Correo
-            <input v-model="authForm.email" type="email" placeholder="correo@ejemplo.com" />
-          </label>
-
-          <label>
-            Contraseña
-            <input v-model="authForm.password" type="password" placeholder="********" />
-          </label>
-
-          <div class="actions-row">
-            <button type="submit">
-              {{ authMode === 'register' ? 'Crear cuenta' : 'Iniciar sesión' }}
-            </button>
-          </div>
-
-          <p class="auth-error" v-if="authError">{{ authError }}</p>
-        </form>
+        <AuthPage
+          :auth-mode="authMode"
+          :auth-form="authForm"
+          :auth-error="authError"
+          :loading="loading"
+          :products-count="products.length"
+          :total-value="totalValue"
+          :theme="theme"
+          @toggle-mode="(mode) => (authMode = mode)"
+          @toggle-theme="toggleTheme"
+          @submit-auth="submitAuth"
+        />
       </template>
 
       <template v-else>
@@ -318,7 +290,6 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
 </template>
 
 <style scoped>
-/* CSS variables and light/dark palettes set on :root and overwritten by .dark */
 :global(:root) {
   --bg: #f3f4f6;
   --card-bg: #ffffff;
@@ -388,11 +359,11 @@ body::before {
 }
 
 .card {
-  width: min(720px, 100%);
-  background: var(--card-bg);
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: var(--shadow);
+  width: min(1024px, 100%);
+  background: transparent;
+  border-radius: 24px;
+  padding: 0;
+  box-shadow: none;
 }
 
 .header {
