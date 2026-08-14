@@ -36,11 +36,43 @@ const resetAuthForm = () => {
   authError.value = ''
 }
 
+const getUserStorageKey = () => {
+  const currentUser = user.value || JSON.parse(localStorage.getItem('user') || 'null')
+  return currentUser?.id ? `stockcrud_products_${currentUser.id}` : 'stockcrud_products_guest'
+}
+
+const saveProductsToLocalStorage = () => {
+  if (!user.value?.id) return
+  const payload = JSON.parse(localStorage.getItem('stockcrud_products') || '{}')
+  payload[user.value.id] = products.value
+  localStorage.setItem('stockcrud_products', JSON.stringify(payload))
+}
+
+const loadProductsFromLocalStorage = () => {
+  if (!user.value?.id) return []
+
+  try {
+    const payload = JSON.parse(localStorage.getItem('stockcrud_products') || '{}')
+    const savedProducts = payload[user.value.id] || []
+    products.value = savedProducts.map((product) => ({
+      id: String(product.id ?? product._id),
+      name: String(product.name),
+      quantity: Number(product.quantity),
+      price: Number(product.price),
+    }))
+    return products.value
+  } catch (error) {
+    console.error('No se pudieron leer los productos guardados:', error)
+    return []
+  }
+}
+
 const saveSession = (session) => {
   token.value = session.token
   user.value = session.user
   localStorage.setItem('jwt_token', session.token)
   localStorage.setItem('user', JSON.stringify(session.user))
+  loadProductsFromLocalStorage()
 }
 
 const clearSession = () => {
@@ -54,9 +86,16 @@ const clearSession = () => {
 
 const loadProducts = async () => {
   if (!token.value) return
+
+  const cachedProducts = loadProductsFromLocalStorage()
+  if (cachedProducts.length) {
+    products.value = cachedProducts
+  }
+
   loading.value = true
   try {
     await fetchProducts(products, token.value)
+    saveProductsToLocalStorage()
   } catch (err) {
     console.error('Carga inicial de productos falló:', err)
     if (err.message.includes('Unauthorized') || err.message.includes('token')) {
@@ -83,6 +122,7 @@ const submitProduct = async () => {
     } else {
       await createProduct(products.value, { name, quantity, price }, token.value)
     }
+    saveProductsToLocalStorage()
     resetForm()
   } catch (err) {
     console.error(err)
@@ -106,6 +146,7 @@ const removeProduct = async (id) => {
   loading.value = true
   try {
     await deleteProduct(products.value, id, token.value)
+    saveProductsToLocalStorage()
     if (editingId.value === id) resetForm()
   } catch (err) {
     console.error(err)
@@ -183,11 +224,80 @@ const themeEmoji = computed(() => (theme.value === 'dark' ? '🌚' : '☀️'))
 const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
 </script>
 
+<script>
+const scrollToSection = (id) => {
+  document.getElementById(id)?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'start',
+  })
+}
+</script>
+
 <template>
   <main class="page">
+    <section class="landing-hero">
+      <div class="landing-copy">
+        <p class="eyebrow">Stock CRUD</p>
+        <h1>Gestiona tu inventario con claridad y velocidad.</h1>
+        <p class="subtitle">Controla productos, precios y stock en una sola plataforma.</p>
+        <p class="support-text">
+          Organiza tu negocio con un sistema simple, seguro y pensado para mantener cada
+          actualización al día.
+        </p>
+        <div class="cta-row">
+          <button type="button" @click="scrollToSection('login')" class="primary-cta">Comenzar</button>
+          <button type="button" class="secondary-cta">Ver demo</button>
+        </div>
+      </div>
+
+      <div class="hero-shot" aria-label="Vista previa del panel de inventario">
+        <div class="hero-panel">
+          <div class="hero-topbar">
+            <span class="chip active">Inventario</span>
+          </div>
+
+          <div class="hero-metrics">
+            <div class="metric-box">
+              <span>Productos</span>
+              <strong>128</strong>
+            </div>
+            <div class="metric-box highlighted">
+              <span>Valor total</span>
+              <strong>$1.4M</strong>
+            </div>
+          </div>
+
+          <div class="hero-list">
+            <div class="hero-item">
+              <div>
+                <strong>Café Premium</strong>
+                <small>Stock: 24</small>
+              </div>
+              <span>$18.000</span>
+            </div>
+            <div class="hero-item">
+              <div>
+                <strong>Galletas Artesanales</strong>
+                <small>Stock: 16</small>
+              </div>
+              <span>$9.500</span>
+            </div>
+            <div class="hero-item">
+              <div>
+                <strong>Jabón Herbal</strong>
+                <small>Stock: 32</small>
+              </div>
+              <span>$7.200</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <section class="card">
       <header class="header">
         <div>
+          <section id="login">
           <p class="eyebrow">Stock CRUD</p>
           <h1>Gestión de inventario</h1>
           <p class="subhead">
@@ -198,7 +308,9 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
               Inicia sesión o regístrate para comenzar a guardar tus productos.
             </template>
           </p>
+          </section>
         </div>
+        
 
         <div class="header-controls">
           <div class="summary">
@@ -235,55 +347,65 @@ const themeLabel = computed(() => (theme.value === 'dark' ? 'Oscuro' : 'Claro'))
       </template>
 
       <template v-else>
-        <div class="user-actions">
-          <span class="user-label">Usuario: {{ user.email }}</span>
-          <button type="button" class="secondary" @click="logout">Cerrar sesión</button>
+        <div v-if="loading && !products.length" class="products-loading" aria-live="polite">
+          <div class="spinner" aria-hidden="true"></div>
+          <div>
+            <strong>Cargando tus productos...</strong>
+            <p>Estamos trayendo tu inventario personal.</p>
+          </div>
         </div>
 
-        <form class="form" @submit.prevent="submitProduct">
-          <label>
-            Nombre
-            <input v-model="form.name" placeholder="Ej. Café" />
-          </label>
-
-          <label>
-            Cantidad
-            <input v-model="form.quantity" type="number" min="1" placeholder="10" />
-          </label>
-
-          <label>
-            Precio
-            <input v-model="form.price" type="number" min="0" step="0" placeholder="2500" />
-          </label>
-
-          <div class="actions-row">
-            <button type="submit">
-              {{ isEditing ? 'Guardar producto' : 'Agregar producto' }}
-            </button>
-            <button v-if="isEditing" type="button" class="secondary" @click="resetForm">
-              Cancelar
-            </button>
+        <template v-else>
+          <div class="user-actions">
+            <span class="user-label">Usuario: {{ user.email }}</span>
+            <button type="button" class="secondary" @click="logout">Cerrar sesión</button>
           </div>
-        </form>
 
-        <ul v-if="products.length" class="list">
-          <li v-for="product in products" :key="product.id" class="item">
-            <div>
-              <strong>{{ product.name }}</strong>
-              <div class="meta">Cantidad: {{ product.quantity }}</div>
-              <div class="meta">Precio: ${{ product.price.toLocaleString('es-CL') }}</div>
-            </div>
+          <form class="form" @submit.prevent="submitProduct">
+            <label>
+              Nombre
+              <input v-model="form.name" placeholder="Ej. Café" />
+            </label>
 
-            <div class="row-actions">
-              <button type="button" @click="editProduct(product)">Editar</button>
-              <button type="button" class="danger" @click="removeProduct(product.id)">
-                Eliminar
+            <label>
+              Cantidad
+              <input v-model="form.quantity" type="number" min="1" placeholder="10" />
+            </label>
+
+            <label>
+              Precio
+              <input v-model="form.price" type="number" min="0" step="0" placeholder="2500" />
+            </label>
+
+            <div class="actions-row">
+              <button type="submit">
+                {{ isEditing ? 'Guardar producto' : 'Agregar producto' }}
+              </button>
+              <button v-if="isEditing" type="button" class="secondary" @click="resetForm">
+                Cancelar
               </button>
             </div>
-          </li>
-        </ul>
+          </form>
 
-        <p v-else class="empty">Aún no hay productos registrados.</p>
+          <ul v-if="products.length" class="list">
+            <li v-for="product in products" :key="product.id" class="item">
+              <div>
+                <strong>{{ product.name }}</strong>
+                <div class="meta">Cantidad: {{ product.quantity }}</div>
+                <div class="meta">Precio: ${{ product.price.toLocaleString('es-CL') }}</div>
+              </div>
+
+              <div class="row-actions">
+                <button type="button" @click="editProduct(product)">Editar</button>
+                <button type="button" class="danger" @click="removeProduct(product.id)">
+                  Eliminar
+                </button>
+              </div>
+            </li>
+          </ul>
+
+          <p v-else class="empty">Aún no hay productos registrados.</p>
+        </template>
       </template>
     </section>
   </main>
@@ -356,6 +478,171 @@ body::before {
   display: grid;
   place-items: center;
   padding: 2rem;
+  gap: 2rem;
+}
+
+.landing-hero {
+  width: min(1200px, 100%);
+  display: grid;
+  grid-template-columns: 1.1fr 0.9fr;
+  align-items: center;
+  gap: 2rem;
+  padding: 1rem 0;
+}
+
+.landing-copy {
+  display: grid;
+  gap: 1rem;
+}
+
+.landing-copy h1 {
+  margin: 0;
+  font-size: clamp(2.5rem, 5vw, 4.4rem);
+  line-height: 1.04;
+  letter-spacing: -0.06em;
+  color: var(--text);
+}
+
+.subtitle {
+  margin: 0;
+  font-size: clamp(1.05rem, 1.5vw, 1.35rem);
+  color: var(--muted);
+  max-width: 38rem;
+}
+
+.support-text {
+  margin: 0;
+  max-width: 36rem;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.7;
+}
+
+.cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.primary-cta,
+.secondary-cta {
+  padding: 0.9rem 1.2rem;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-cta {
+  background: linear-gradient(135deg, var(--primary), var(--eyebrow));
+  color: rgb(0, 0, 0);
+}
+
+.secondary-cta {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.hero-shot {
+  display: flex;
+  justify-content: center;
+}
+
+.hero-panel {
+  width: min(100%, 480px);
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(8px);
+}
+
+:global(.dark) .hero-panel {
+  background: rgba(15, 23, 36, 0.8);
+}
+
+.hero-topbar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.chip {
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.chip.active {
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--primary);
+}
+
+.hero-metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.metric-box {
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.metric-box span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.metric-box strong {
+  color: var(--text);
+  font-size: 1.2rem;
+}
+
+.metric-box.highlighted {
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(124, 58, 237, 0.12));
+}
+
+.hero-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.hero-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgba(148, 163, 184, 0.06);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.8rem 0.9rem;
+}
+
+.hero-item strong {
+  display: block;
+  color: var(--text);
+  margin-bottom: 0.15rem;
+}
+
+.hero-item small {
+  color: var(--muted);
+}
+
+.hero-item span {
+  color: var(--primary);
+  font-weight: 700;
 }
 
 .card {
@@ -480,6 +767,43 @@ button {
 .meta {
   color: var(--muted);
   margin-top: 0.25rem;
+}
+
+.products-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem 1rem;
+  background: rgba(148, 163, 184, 0.08);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  color: var(--text);
+}
+
+.products-loading strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.products-loading p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.spinner {
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 3px solid rgba(148, 163, 184, 0.3);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .empty {
