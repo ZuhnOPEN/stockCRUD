@@ -326,8 +326,9 @@ const scrollToSection = (id) => {
             :title="`Tema: ${themeLabel}`"
           >
             <span class="emoji">{{ themeEmoji }}</span>
-            <span class="visually-hidden">Cambiar tema</span>
+            <span class="visually-hidden">Cambiar tema</span>  
           </button>
+          
         </div>
       </header>
 
