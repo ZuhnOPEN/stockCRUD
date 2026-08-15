@@ -16,7 +16,7 @@ const MONGODB_URI =
   process.env.MONGODB_URI ||
   'mongodb+srv://randolfgameplays23_db_user:pHFbg1qM5jwkL1DM@stockcrud.3bc66rd.mongodb.net/?'
 const PORT = process.env.PORT || 4000
-const JWT_SECRET = process.env.JWT_SECRET || 'cambiar_esta_clave_secreta'
+const JWT_SECRET = process.env.JWT_SECRET || 'secretDiscoveredCRUD'
 
 const token = jwt.sign({ userId: 'testUserId', email: 'test@example.com' }, JWT_SECRET, {
   expiresIn: '1h',
