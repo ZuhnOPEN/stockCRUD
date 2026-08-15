@@ -76,7 +76,7 @@ const formatCurrency = (value) =>
             <span>Stock CRUD</span>
           </div>
 
-          <button
+        <!--  <button
             class="theme-toggle"
             type="button"
             :aria-pressed="isDark"
@@ -84,6 +84,7 @@ const formatCurrency = (value) =>
           >
             <span>{{ isDark ? '☀️' : '🌙' }}</span>
           </button>
+          -->
         </div>
 
         <div class="auth-switch" role="tablist" aria-label="Modo de autenticación">

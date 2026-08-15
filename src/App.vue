@@ -245,8 +245,10 @@ const scrollToSection = (id) => {
           actualización al día.
         </p>
         <div class="cta-row">
-          <button type="button" @click="scrollToSection('login')" class="primary-cta">Comenzar</button>
-          <button type="button" class="secondary-cta">Ver demo</button>
+          <button type="button" @click="scrollToSection('login')" class="primary-cta">
+            Comenzar
+          </button>
+          <!--  <button type="button" class="secondary-cta">Ver demo</button>-->
         </div>
       </div>
 
@@ -298,19 +300,18 @@ const scrollToSection = (id) => {
       <header class="header">
         <div>
           <section id="login">
-          <p class="eyebrow">Stock CRUD</p>
-          <h1>Gestión de inventario</h1>
-          <p class="subhead">
-            <template v-if="isAuthenticated">
-              Hola, {{ user.name }} — tus productos son persistentes y solo visibles para ti.
-            </template>
-            <template v-else>
-              Inicia sesión o regístrate para comenzar a guardar tus productos.
-            </template>
-          </p>
+            <p class="eyebrow">Stock CRUD</p>
+            <h1>Gestión de inventario</h1>
+            <p class="subhead">
+              <template v-if="isAuthenticated">
+                Hola, {{ user.name }} — tus productos son persistentes y solo visibles para ti.
+              </template>
+              <template v-else>
+                Inicia sesión o regístrate para comenzar a guardar tus productos.
+              </template>
+            </p>
           </section>
         </div>
-        
 
         <div class="header-controls">
           <div class="summary">
@@ -326,9 +327,8 @@ const scrollToSection = (id) => {
             :title="`Tema: ${themeLabel}`"
           >
             <span class="emoji">{{ themeEmoji }}</span>
-            <span class="visually-hidden">Cambiar tema</span>  
+            <span class="visually-hidden">Cambiar tema</span>
           </button>
-          
         </div>
       </header>
 
@@ -409,6 +409,57 @@ const scrollToSection = (id) => {
         </template>
       </template>
     </section>
+
+    <footer class="landing-footer" aria-label="Pie de página del landing page">
+      <div class="footer-cta">
+        <div>
+          <p class="eyebrow">Stock CRUD</p>
+          <h2>Tu inventario más claro, más rápido y más controlado.</h2>
+        </div>
+        <button type="button" class="primary-cta footer-button" @click="scrollToSection('login')">
+          Empezar ahora
+        </button>
+      </div>
+
+      <div class="footer-grid">
+        <div class="brand-block">
+          <div class="brand-mark">S</div>
+          <div>
+            <strong>Stock CRUD</strong>
+            <p>Gestión inteligente para negocios que quieren crecer sin complicaciones.</p>
+          </div>
+        </div>
+
+        <div class="footer-column">
+          <span class="column-title">Producto</span>
+          <a href="#">Inventario</a>
+          <a href="#">Reportes</a>
+          <a href="#">Precios</a>
+        </div>
+
+        <div class="footer-column">
+          <span class="column-title">Recursos</span>
+          <a href="#">Blog</a>
+          <a href="#">Guías</a>
+          <a href="#">Soporte</a>
+        </div>
+
+        <div class="footer-column">
+          <span class="column-title">Empresa</span>
+          <a href="#">Nosotros</a>
+          <a href="#">Contacto</a>
+          <a href="#">Privacidad</a>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <span>© 2026 Stock CRUD</span>
+        <div class="socials" aria-label="Redes sociales">
+          <a href="https://github.com/ZuhnOPEN/stockCRUD/tree/main" target="_blank" rel="noopener noreferrer">
+            <span>Github</span></a>
+        </div>
+      </div>
+    </footer>
   </main>
 </template>
 
@@ -810,6 +861,190 @@ button {
 .empty {
   color: var(--muted);
   margin: 0;
+}
+
+.landing-footer {
+  width: min(1200px, 100%);
+  margin-top: 0.5rem;
+  padding: 1.5rem 1.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: rgba(15, 23, 42, 0.56);
+  backdrop-filter: blur(12px);
+  box-shadow: var(--shadow);
+  position: relative;
+  overflow: hidden;
+}
+
+.landing-footer::before,
+.landing-footer::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(18px);
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.landing-footer::before {
+  width: 220px;
+  height: 220px;
+  background: rgba(96, 165, 250, 0.18);
+  top: -80px;
+  right: -30px;
+}
+
+.landing-footer::after {
+  width: 180px;
+  height: 180px;
+  background: rgba(124, 58, 237, 0.18);
+  bottom: -60px;
+  left: -30px;
+}
+
+.footer-cta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: 1rem 0 1.5rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.footer-cta h2 {
+  margin: 0;
+  max-width: 38rem;
+  color: var(--text);
+  font-size: clamp(1.5rem, 2vw, 2.2rem);
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+
+.footer-button {
+  white-space: nowrap;
+}
+
+.footer-grid {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: 1.6fr repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+  padding-top: 1.5rem;
+}
+
+.brand-block {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.brand-mark {
+  width: 2.6rem;
+  height: 2.6rem;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--primary), var(--eyebrow));
+  color: #fff;
+  border-radius: 14px;
+  font-size: 1.1rem;
+  font-weight: 800;
+  box-shadow: 0 12px 24px rgba(96, 165, 250, 0.2);
+}
+
+.brand-block strong {
+  display: block;
+  font-size: 1.05rem;
+  color: var(--text);
+  margin-bottom: 0.3rem;
+}
+
+.brand-block p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.7;
+  max-width: 18rem;
+}
+
+.footer-column {
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.column-title {
+  color: var(--text);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 0.2rem;
+}
+
+.footer-column a {
+  color: var(--muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-column a:hover {
+  color: var(--text);
+}
+
+.footer-bottom {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.socials {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.socials span {
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.06);
+  color: var(--text);
+}
+
+@media (max-width: 760px) {
+  .landing-footer {
+    padding: 1rem;
+  }
+
+  .footer-cta,
+  .footer-bottom {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .brand-block {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 520px) {
+  .footer-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .visually-hidden {
