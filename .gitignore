@@ -32,8 +32,19 @@ coverage
 /cypress/videos/
 /cypress/screenshots/
 
-# Vitest
+# Component test artifacts
 __screenshots__/
+coverage/
+test-results/
+playwright-report/
+storybook-static/
+.vitest/
+.nyc_output/
+.scripts/
+.server/
+
+# Selenium screenshots
+screenshots/
 
 # Vite
 *.timestamp-*-*.mjs

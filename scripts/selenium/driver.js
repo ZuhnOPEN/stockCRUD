@@ -35,9 +35,10 @@ export async function createDriver() {
     options.addArguments('-width=1920')
     options.addArguments('-height=1080')
 
-    driver = await new Builder().forBrowser('firefox').setFirefoxOptions(options).build()
-  } else if (browser === 'chrome') {
-    const options = new chrome.Options()
+driver = await new Builder()
+  .forBrowser('firefox')
+  .setFirefoxOptions(options)
+  .build()
 
     if (config.headless) {
       options.addArguments('--headless=new')
@@ -47,7 +48,7 @@ export async function createDriver() {
     options.addArguments('--no-sandbox')
     options.addArguments('--disable-dev-shm-usage')
     options.addArguments('--disable-gpu')
-    options.excludeSwitch('enable-logging')
+    // options.excludeSwitch('enable-logging')
 
     driver = await new Builder().forBrowser('chrome').setChromeOptions(options).build()
   } else {

@@ -14,7 +14,7 @@ export const config = {
   headless: process.env.HEADLESS !== 'false',
   timeout: 10000,
   implicitWait: 8000,
-  browser: process.env.BROWSER || 'firefox',
+browser: process.env.BROWSER || 'firefox',
   testUser: {
     name: 'QA Test User',
     email: process.env.TEST_EMAIL || `qa_test_${Date.now()}@test.com`,

@@ -14,6 +14,7 @@ describe('Login Flow Tests', () => {
   })
 
   beforeEach(async () => {
+    await driver.get(config.baseUrl)
     await clearLocalStorage(driver)
     await driver.get(config.baseUrl)
     await sleep(2000) // Esperar a que cargue la página
