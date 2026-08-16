@@ -113,10 +113,26 @@ export async function takeScreenshot(driver, filename) {
 }
 
 /**
- * Limpia el localStorage
+ * Limpia el localStorage y sessionStorage
+ * Se ejecuta después de cargar la página porque Firefox falla
+ * si intenta limpiar storage antes de que exista la vista actual.
  */
 export async function clearLocalStorage(driver) {
-  return driver.executeScript('window.localStorage.clear();')
+  try {
+    await driver.executeScript(`
+      try {
+        window.localStorage.clear();
+        window.sessionStorage.clear();
+        return true;
+      } catch (error) {
+        return false;
+      }
+    `)
+  } catch (error) {
+    // Firefox puede lanzar este error si aún no hay una página activa
+    // o si el storage no está disponible en ese momento.
+    console.warn('No se pudo limpiar localStorage/sessionStorage:', error.message)
+  }
 }
 
 /**
