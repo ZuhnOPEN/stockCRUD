@@ -1712,8 +1712,3 @@ server/node_modules/whatwg-url/lib/URLSearchParams-impl.js
 server/node_modules/whatwg-url/lib/URLSearchParams.js
 server/node_modules/whatwg-url/lib/utils.js
 server/node_modules/whatwg-url/lib/VoidFunction.js
-
-
-#local docs
-
-REQUIREMENTS.md
