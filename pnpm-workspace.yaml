@@ -1,3 +1,8 @@
+allowBuilds:
+  chromedriver: false
+  geckodriver: false
+  unrs-resolver: false
+
 overrides:
   'vue': 'rc'
   '@vue/compiler-core': 'rc'
