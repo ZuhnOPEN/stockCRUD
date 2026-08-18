@@ -65,3 +65,6 @@ screenshots/
 .profile
 .zprofile
 .zshrc
+.REQUIREMENTS.md
+.SELENIUM_QUICKSTART.md
+.FIREFOX_GUIDE.md
